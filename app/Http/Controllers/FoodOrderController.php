@@ -49,12 +49,6 @@ class FoodOrderController extends Controller
      */
     public function create(Request $request): JsonResponse|InertiaResponse
     {
-        $customers = Customer::orderBy('customer_name')->get();
-
-        $restaurants = Restaurant::orderBy('restaurant_name')->get();
-
-        $riders = Rider::where('is_available', true)->get();
-
         $statuses = [
             'pending',
             'assigned',
@@ -66,8 +60,14 @@ class FoodOrderController extends Controller
         ];
 
         if (! $request->expectsJson()) {
-            return Inertia::render('food-orders/create', compact('statuses'));
+            return Inertia::render('food-orders/create', [
+                'statuses' => $statuses,
+            ]);
         }
+
+        $customers = Customer::orderBy('customer_name')->get();
+        $restaurants = Restaurant::orderBy('restaurant_name')->get();
+        $riders = Rider::where('is_available', true)->get();
 
         return response()->json([
             'customers' => $customers,
