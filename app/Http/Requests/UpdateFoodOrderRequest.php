@@ -90,4 +90,4 @@ class UpdateFoodOrderRequest extends FormRequest
             'items.*.quantity.max' => 'An item quantity exceeds the maximum supported amount.',
         ];
     }
-}//.
+}g
