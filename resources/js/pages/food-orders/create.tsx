@@ -23,9 +23,15 @@ type FoodOrderForm = {
     customer_name: string;
     delivery_address: string;
     restaurant_name: string;
+    rider_id: string;
     delivery_fee: string;
     dispatch_status: OrderStatus;
     items: OrderItem[];
+};
+
+type AvailableRider = {
+    id: number;
+    rider_name: string;
 };
 
 const breadcrumbs: BreadcrumbItem[] = [
@@ -50,12 +56,22 @@ const currency = new Intl.NumberFormat('en-PH', {
     currency: 'PHP',
 });
 
-export default function CreateFoodOrder({ statuses: availableStatuses = statuses.map((status) => status.value) }: { statuses?: OrderStatus[] }) {
+const capitalizeName = (value: string) =>
+    value.replace(/(^|[\s'-])(\p{Ll})/gu, (_, separator: string, letter: string) => separator + letter.toLocaleUpperCase());
+
+export default function CreateFoodOrder({
+    statuses: availableStatuses = statuses.map((status) => status.value),
+    availableRiders = [],
+}: {
+    statuses?: OrderStatus[];
+    availableRiders?: AvailableRider[];
+}) {
     const form = useForm<FoodOrderForm>({
         dispatch_id: '',
         customer_name: '',
         delivery_address: '',
         restaurant_name: '',
+        rider_id: '',
         delivery_fee: '0.00',
         dispatch_status: 'pending',
         items: [emptyItem()],
@@ -175,7 +191,7 @@ export default function CreateFoodOrder({ statuses: availableStatuses = statuses
                                     <Input
                                         id="customer_name"
                                         value={form.data.customer_name}
-                                        onChange={(event) => form.setData('customer_name', event.target.value)}
+                                        onChange={(event) => form.setData('customer_name', capitalizeName(event.target.value))}
                                         placeholder="Full name"
                                         maxLength={255}
                                         required
@@ -187,12 +203,37 @@ export default function CreateFoodOrder({ statuses: availableStatuses = statuses
                                     <Input
                                         id="restaurant_name"
                                         value={form.data.restaurant_name}
-                                        onChange={(event) => form.setData('restaurant_name', event.target.value)}
+                                        onChange={(event) => form.setData('restaurant_name', capitalizeName(event.target.value))}
                                         placeholder="Restaurant name"
                                         maxLength={255}
                                         required
                                     />
                                     <InputError message={form.errors.restaurant_name} />
+                                </div>
+                                <div className="grid gap-2 sm:col-span-2">
+                                    <Label htmlFor="rider_id">Delivery rider</Label>
+                                    <Select
+                                        value={form.data.rider_id || 'random'}
+                                        onValueChange={(value) => form.setData('rider_id', value === 'random' ? '' : value)}
+                                    >
+                                        <SelectTrigger id="rider_id">
+                                            <SelectValue placeholder="Choose a rider" />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            <SelectItem value="random">Randomly assign an available rider</SelectItem>
+                                            {availableRiders.map((rider) => (
+                                                <SelectItem key={rider.id} value={String(rider.id)}>
+                                                    {rider.rider_name}
+                                                </SelectItem>
+                                            ))}
+                                        </SelectContent>
+                                    </Select>
+                                    <p className="text-sm text-muted-foreground">
+                                        {availableRiders.length
+                                            ? 'Choose a rider, or randomly assign one from the riders currently available.'
+                                            : 'No riders are available right now. The order will remain unassigned.'}
+                                    </p>
+                                    <InputError message={form.errors.rider_id} />
                                 </div>
                                 <div className="grid gap-2 sm:col-span-2">
                                     <Label htmlFor="delivery_address">Delivery address</Label>
@@ -263,6 +304,7 @@ export default function CreateFoodOrder({ statuses: availableStatuses = statuses
                                                     id={`item-price-${index}`}
                                                     type="number"
                                                     min="0"
+                                                    max="99999999.99"
                                                     step="0.01"
                                                     value={item.item_price}
                                                     onChange={(event) => updateItem(index, 'item_price', event.target.value)}
@@ -277,6 +319,7 @@ export default function CreateFoodOrder({ statuses: availableStatuses = statuses
                                                     id={`item-quantity-${index}`}
                                                     type="number"
                                                     min="1"
+                                                    max="4294967295"
                                                     step="1"
                                                     value={item.quantity}
                                                     onChange={(event) => updateItem(index, 'quantity', Number(event.target.value))}
@@ -311,6 +354,7 @@ export default function CreateFoodOrder({ statuses: availableStatuses = statuses
                                         id="delivery_fee"
                                         type="number"
                                         min="0"
+                                        max="99999999.99"
                                         step="0.01"
                                         value={form.data.delivery_fee}
                                         onChange={(event) => form.setData('delivery_fee', event.target.value)}
@@ -323,6 +367,7 @@ export default function CreateFoodOrder({ statuses: availableStatuses = statuses
                                         <span className="font-medium">Total</span>
                                         <span className="text-2xl font-semibold tracking-tight">{currency.format(total)}</span>
                                     </div>
+                                    <InputError message={form.errors['total_bill' as keyof typeof form.errors]} />
                                 </div>
                                 <Button type="submit" className="w-full" disabled={form.processing}>
                                     {form.processing ? 'Creating order…' : 'Create order'}

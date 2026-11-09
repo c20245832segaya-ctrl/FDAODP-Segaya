@@ -60,14 +60,23 @@ class FoodOrderController extends Controller
         ];
 
         if (! $request->expectsJson()) {
+            $availableRiders = Rider::query()
+                ->where('is_available', true)
+                ->orderBy('rider_name')
+                ->get(['id', 'rider_name']);
+
             return Inertia::render('food-orders/create', [
                 'statuses' => $statuses,
+                'availableRiders' => $availableRiders,
             ]);
         }
 
         $customers = Customer::orderBy('customer_name')->get();
         $restaurants = Restaurant::orderBy('restaurant_name')->get();
-        $riders = Rider::where('is_available', true)->get();
+        $riders = Rider::query()
+            ->where('is_available', true)
+            ->orderBy('rider_name')
+            ->get(['id', 'rider_name']);
 
         return response()->json([
             'customers' => $customers,

@@ -2,11 +2,15 @@
 
 namespace App\Http\Requests;
 
+use App\Http\Requests\Concerns\ValidatesOrderAmount;
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Contracts\Validation\Validator;
 use Illuminate\Validation\Rule;
 
 class StoreFoodOrderRequest extends FormRequest
 {
+    use ValidatesOrderAmount;
+
     public function authorize(): bool
     {
         return $this->user() !== null;
@@ -50,6 +54,7 @@ class StoreFoodOrderRequest extends FormRequest
                 'required',
                 'numeric',
                 'min:0',
+                'max:99999999.99',
                 'decimal:0,2',
             ],
 
@@ -83,6 +88,7 @@ class StoreFoodOrderRequest extends FormRequest
                 'required',
                 'numeric',
                 'min:0',
+                'max:99999999.99',
                 'decimal:0,2',
             ],
 
@@ -90,8 +96,18 @@ class StoreFoodOrderRequest extends FormRequest
                 'required',
                 'integer',
                 'min:1',
+                'max:4294967295',
             ],
         ];
+    }
+
+    public function withValidator(Validator $validator): void
+    {
+        $this->validateOrderAmount(
+            $validator,
+            $this->input('items', []),
+            $this->input('delivery_fee')
+        );
     }
 
     public function messages(): array
@@ -104,12 +120,15 @@ class StoreFoodOrderRequest extends FormRequest
             'restaurant_name.required' => 'A restaurant name is required.',
             'rider_id.exists' => 'The selected rider does not exist.',
             'delivery_fee.decimal' => 'The delivery fee may have no more than 2 decimal places.',
+            'delivery_fee.max' => 'The delivery fee exceeds the maximum supported amount.',
             'dispatch_status.in' => 'The selected dispatch status is invalid.',
             'items.required' => 'Add at least one item to the order.',
             'items.min' => 'Add at least one item to the order.',
             'items.*.menu_item_name.required' => 'Each item must have a name.',
             'items.*.item_price.decimal' => 'Each item price may have no more than 2 decimal places.',
+            'items.*.item_price.max' => 'An item price exceeds the maximum supported amount.',
             'items.*.quantity.min' => 'Each item quantity must be at least 1.',
+            'items.*.quantity.max' => 'An item quantity exceeds the maximum supported amount.',
         ];
     }
 }

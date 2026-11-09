@@ -12,18 +12,10 @@ use Illuminate\Validation\ValidationException;
 
 class FoodOrderService
 {
-    private const ACTIVE_STATUSES = [
-        'pending',
-        'assigned',
-        'preparing',
-        'picked_up',
-        'out_for_delivery',
-    ];
-
     public function create(array $data): FoodOrder
     {
         return DB::transaction(function () use ($data) {
-            $customerName = $this->cleanText(
+            $customerName = $this->cleanName(
                 $data['customer_name'],
                 'customer_name'
             );
@@ -36,7 +28,7 @@ class FoodOrderService
             ]);
 
             $restaurant = Restaurant::firstOrCreate([
-                'restaurant_name' => $this->cleanText(
+                'restaurant_name' => $this->cleanName(
                     $data['restaurant_name'],
                     'restaurant_name'
                 ),
@@ -114,7 +106,7 @@ class FoodOrderService
                 $customer = $order->customer;
 
                 $customer->update([
-                    'customer_name' => $this->cleanText(
+                    'customer_name' => $this->cleanName(
                         $data['customer_name'] ?? $customer->customer_name,
                         'customer_name'
                     ),
@@ -127,7 +119,7 @@ class FoodOrderService
 
             if (isset($data['restaurant_name'])) {
                 $restaurant = Restaurant::firstOrCreate([
-                    'restaurant_name' => $this->cleanText(
+                    'restaurant_name' => $this->cleanName(
                         $data['restaurant_name'],
                         'restaurant_name'
                     ),
@@ -216,16 +208,7 @@ class FoodOrderService
     {
         return Rider::query()
             ->where('is_available', true)
-            ->withCount([
-                'foodOrders as active_dispatches_count' => function ($query) {
-                    $query->whereIn(
-                        'dispatch_status',
-                        self::ACTIVE_STATUSES
-                    );
-                },
-            ])
-            ->orderBy('active_dispatches_count')
-            ->orderBy('id')
+            ->inRandomOrder()
             ->lockForUpdate()
             ->first();
     }
@@ -251,6 +234,17 @@ class FoodOrderService
     private function cleanAddress(string $address): string
     {
         return $this->cleanText($address, 'delivery_address');
+    }
+
+    private function cleanName(string $value, string $field): string
+    {
+        $cleaned = $this->cleanText($value, $field);
+
+        return preg_replace_callback(
+            "/(^|[\\s'-])(\\p{Ll})/u",
+            fn (array $matches): string => $matches[1].mb_strtoupper($matches[2]),
+            $cleaned
+        ) ?? $cleaned;
     }
 
     private function cleanText(string $value, string $field): string
