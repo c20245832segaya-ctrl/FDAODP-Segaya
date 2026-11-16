@@ -29,6 +29,7 @@ class UpdateFoodOrderRequest extends FormRequest
             'customer_name' => ['sometimes', 'required', 'string', 'max:255'],
             'delivery_address' => ['sometimes', 'required', 'string', 'max:1000'],
             'restaurant_name' => ['sometimes', 'required', 'string', 'max:255'],
+            'rider_id' => ['sometimes', 'nullable', 'integer', 'exists:riders,id'],
             'delivery_fee' => ['sometimes', 'required', 'numeric', 'min:0', 'max:99999999.99', 'decimal:0,2'],
             'dispatch_status' => [
                 'sometimes',
@@ -78,6 +79,7 @@ class UpdateFoodOrderRequest extends FormRequest
             'customer_name.required' => 'A customer name is required.',
             'delivery_address.required' => 'A delivery address is required.',
             'restaurant_name.required' => 'A restaurant name is required.',
+            'rider_id.exists' => 'The selected rider does not exist.',
             'delivery_fee.decimal' => 'The delivery fee may have no more than 2 decimal places.',
             'delivery_fee.max' => 'The delivery fee exceeds the maximum supported amount.',
             'dispatch_status.in' => 'The selected dispatch status is invalid.',
@@ -90,4 +92,4 @@ class UpdateFoodOrderRequest extends FormRequest
             'items.*.quantity.max' => 'An item quantity exceeds the maximum supported amount.',
         ];
     }
-}g
+}

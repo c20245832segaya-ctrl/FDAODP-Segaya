@@ -13,20 +13,22 @@ class FoodOrderRiderSelectionTest extends TestCase
 {
     use RefreshDatabase;
 
-    public function test_create_form_lists_available_riders(): void
+    public function test_create_form_lists_all_riders(): void
     {
         $this->actingAs(User::factory()->create());
 
         $availableRider = Rider::create(['rider_name' => 'Available Rider', 'is_available' => true]);
-        Rider::create(['rider_name' => 'Unavailable Rider', 'is_available' => false]);
+        $unavailableRider = Rider::create(['rider_name' => 'Unavailable Rider', 'is_available' => false]);
 
         $this->get('/food-orders/create')
             ->assertOk()
             ->assertInertia(fn (Assert $page) => $page
                 ->component('food-orders/create')
-                ->has('availableRiders', 1)
-                ->where('availableRiders.0.id', $availableRider->id)
-                ->where('availableRiders.0.rider_name', 'Available Rider'));
+                ->has('riders', 2)
+                ->where('riders.0.id', $availableRider->id)
+                ->where('riders.0.rider_name', 'Available Rider')
+                ->where('riders.1.id', $unavailableRider->id)
+                ->where('riders.1.rider_name', 'Unavailable Rider'));
     }
 
     public function test_customer_can_select_an_available_rider_or_receive_an_automatic_assignment(): void
@@ -66,6 +68,27 @@ class FoodOrderRiderSelectionTest extends TestCase
             ->assertSessionHasErrors('rider_id');
 
         $this->assertDatabaseMissing('food_orders', ['dispatch_id' => 'FD-UNAVAILABLE-RIDER']);
+    }
+
+    public function test_customer_can_assign_or_unassign_a_rider_when_updating_an_order(): void
+    {
+        $this->actingAs(User::factory()->create());
+
+        $this->post('/food-orders', $this->orderData('FD-UPDATE-RIDER', null))
+            ->assertRedirect('/food-orders');
+
+        $order = FoodOrder::where('dispatch_id', 'FD-UPDATE-RIDER')->firstOrFail();
+        $rider = Rider::create(['rider_name' => 'Selected Rider', 'is_available' => true]);
+
+        $this->put("/food-orders/{$order->id}", ['rider_id' => $rider->id])
+            ->assertRedirect('/food-orders');
+
+        $this->assertSame($rider->id, $order->fresh()->rider_id);
+
+        $this->put("/food-orders/{$order->id}", ['rider_id' => null])
+            ->assertRedirect('/food-orders');
+
+        $this->assertNull($order->fresh()->rider_id);
     }
 
     private function orderData(string $dispatchId, ?int $riderId): array

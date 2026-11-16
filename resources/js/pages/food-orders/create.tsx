@@ -23,7 +23,7 @@ type FoodOrderForm = {
     customer_name: string;
     delivery_address: string;
     restaurant_name: string;
-    rider_id: string;
+    rider_id: string | null; // Changed to allow null/empty
     delivery_fee: string;
     dispatch_status: OrderStatus;
     items: OrderItem[];
@@ -61,17 +61,19 @@ const capitalizeName = (value: string) =>
 
 export default function CreateFoodOrder({
     statuses: availableStatuses = statuses.map((status) => status.value),
-    availableRiders = [],
+    riders = [],
 }: {
     statuses?: OrderStatus[];
-    availableRiders?: AvailableRider[];
+    riders?: AvailableRider[];
 }) {
+    console.log('Riders received from backend:', riders);
+
     const form = useForm<FoodOrderForm>({
         dispatch_id: '',
         customer_name: '',
         delivery_address: '',
         restaurant_name: '',
-        rider_id: '',
+        rider_id: null, // Initialize as null
         delivery_fee: '0.00',
         dispatch_status: 'pending',
         items: [emptyItem()],
@@ -212,29 +214,23 @@ export default function CreateFoodOrder({
                                 </div>
                                 <div className="grid gap-2 sm:col-span-2">
                                     <Label htmlFor="rider_id">Delivery rider</Label>
-                                    <Select
-                                        value={form.data.rider_id || 'random'}
-                                        onValueChange={(value) => form.setData('rider_id', value === 'random' ? '' : value)}
+                                    <select
+                                        id="rider_id"
+                                        name="rider_id"
+                                        value={form.data.rider_id ?? ''}
+                                        onChange={(event) => form.setData('rider_id', event.target.value || null)}
+                                        className="mt-1 block w-full rounded-md border border-input bg-background px-3 py-2 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                                     >
-                                        <SelectTrigger id="rider_id">
-                                            <SelectValue placeholder="Choose a rider" />
-                                        </SelectTrigger>
-                                        <SelectContent>
-                                            <SelectItem value="random">Randomly assign an available rider</SelectItem>
-                                            {availableRiders.map((rider) => (
-                                                <SelectItem key={rider.id} value={String(rider.id)}>
-                                                    {rider.rider_name}
-                                                </SelectItem>
-                                            ))}
-                                        </SelectContent>
-                                    </Select>
-                                    <p className="text-sm text-muted-foreground">
-                                        {availableRiders.length
-                                            ? 'Choose a rider, or randomly assign one from the riders currently available.'
-                                            : 'No riders are available right now. The order will remain unassigned.'}
-                                    </p>
+                                        <option value="">Select a rider (or leave blank for random)</option>
+                                        {riders && riders.map((rider) => (
+                                            <option key={rider.id} value={rider.id}>
+                                                {rider.rider_name}
+                                            </option>
+                                        ))}
+                                    </select>
                                     <InputError message={form.errors.rider_id} />
                                 </div>
+
                                 <div className="grid gap-2 sm:col-span-2">
                                     <Label htmlFor="delivery_address">Delivery address</Label>
                                     <textarea
