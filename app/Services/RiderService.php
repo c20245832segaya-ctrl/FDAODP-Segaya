@@ -60,10 +60,10 @@ class RiderService
         }, 3);
     }
 
-    private function cleanText(string $value): string
+     private function cleanText(string $value): string
     {
         $plainText = strip_tags($value);
-        $cleaned = preg_replace('/\s+/', ' ', trim($plainText)) ?? trim($plainText);
+        $cleaned = preg_replace('/\s+/u', ' ', trim($plainText)) ?? trim($plainText);
 
         if ($cleaned === '') {
             throw ValidationException::withMessages([
@@ -71,6 +71,6 @@ class RiderService
             ]);
         }
 
-        return $cleaned;
+        return mb_substr($cleaned, 0, 255);
     }
 }

@@ -13,7 +13,8 @@ class RiderController extends Controller
 {
     public function __construct(
         private RiderService $riderService
-    ) {}
+    ) {
+    }
 
     public function index(Request $request): JsonResponse
     {

@@ -35,13 +35,13 @@ class FoodOrderService
             ]);
 
             // Use the selected rider if supplied; otherwise assign one automatically.
-            if (! empty($data['rider_id'])) {
+            if (!empty($data['rider_id'])) {
                 $rider = Rider::query()
                     ->where('is_available', true)
                     ->lockForUpdate()
                     ->find($data['rider_id']);
 
-                if (! $rider) {
+                if (!$rider) {
                     throw ValidationException::withMessages([
                         'rider_id' => [
                             'The selected rider is unavailable. Please choose another rider.',
@@ -112,7 +112,7 @@ class FoodOrderService
                     ),
                     'delivery_address' => $this->cleanAddress(
                         $data['delivery_address']
-                            ?? $customer->delivery_address
+                        ?? $customer->delivery_address
                     ),
                 ]);
             }
@@ -154,7 +154,7 @@ class FoodOrderService
                         ->lockForUpdate()
                         ->find($data['rider_id']);
 
-                    if (! $rider) {
+                    if (!$rider) {
                         throw ValidationException::withMessages([
                             'rider_id' => [
                                 'The selected rider is unavailable. Please choose another rider.',
@@ -166,7 +166,7 @@ class FoodOrderService
                 }
             } elseif (
                 in_array($order->dispatch_status, ['pending', 'assigned'], true)
-                && ! $order->rider_id
+                && !$order->rider_id
             ) {
                 $rider = $this->assignRider();
 
@@ -204,6 +204,40 @@ class FoodOrderService
         }, 3);
     }
 
+    public function getDashboardStats(): array
+    {
+        $activeStatuses = [
+            'pending',
+            'assigned',
+            'preparing',
+            'picked_up',
+            'out_for_delivery',
+        ];
+
+        return [
+            'stats' => [
+                'totalOrders' => FoodOrder::count(),
+                'activeOrders' => FoodOrder::whereIn('dispatch_status', $activeStatuses)->count(),
+                'deliveredOrders' => FoodOrder::where('dispatch_status', 'delivered')->count(),
+                'revenue' => FoodOrder::where('dispatch_status', 'delivered')->sum('total_bill'),
+            ],
+            'recentOrders' => FoodOrder::with([
+                'customer:id,customer_name',
+                'restaurant:id,restaurant_name',
+            ])
+                ->latest()
+                ->limit(5)
+                ->get([
+                    'id',
+                    'dispatch_id',
+                    'customer_id',
+                    'restaurant_id',
+                    'total_bill',
+                    'dispatch_status',
+                    'created_at',
+                ]),
+        ];
+    }
     private function assignRider(): ?Rider
     {
         return Rider::query()
@@ -218,7 +252,7 @@ class FoodOrderService
         $subtotal = $order->items()
             ->get()
             ->sum(
-                fn (OrderItem $item) =>
+                fn(OrderItem $item) =>
                     (float) $item->item_price * $item->quantity
             );
 
@@ -242,24 +276,24 @@ class FoodOrderService
 
         return preg_replace_callback(
             "/(^|[\\s'-])(\\p{Ll})/u",
-            fn (array $matches): string => $matches[1].mb_strtoupper($matches[2]),
+            fn(array $matches): string => $matches[1] . mb_strtoupper($matches[2]),
             $cleaned
         ) ?? $cleaned;
     }
 
     private function cleanText(string $value, string $field): string
     {
+
         $plainText = strip_tags($value);
-        $cleaned = preg_replace('/\s+/', ' ', trim($plainText))
-            ?? trim($plainText);
+        $cleaned = preg_replace('/\s+/u', ' ', trim($plainText)) ?? trim($plainText);
 
         if ($cleaned === '') {
             throw ValidationException::withMessages([
-                $field => ['This field must contain non-HTML text.'],
+                $field => ['This field must contain valid text.'],
             ]);
         }
 
-        return $cleaned;
+        return mb_substr($cleaned, 0, 255);
     }
 
     private function money(int|float|string $value): string

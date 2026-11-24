@@ -18,7 +18,8 @@ class FoodOrderController extends Controller
 {
     public function __construct(
         private FoodOrderService $foodOrderService
-    ) {}
+    ) {
+    }
 
     /**
      * Display the food orders table.
@@ -34,7 +35,7 @@ class FoodOrderController extends Controller
             ->latest()
             ->paginate($request->integer('per_page', 10));
 
-        if (! $request->expectsJson()) {
+        if (!$request->expectsJson()) {
             return Inertia::render('food-orders/index', [
                 'foodOrders' => $orders,
                 'success' => $request->session()->get('success'),
@@ -59,22 +60,28 @@ class FoodOrderController extends Controller
             'cancelled',
         ];
 
-        if (! $request->expectsJson()) {
-            $riders = Rider::query()
-                ->orderBy('rider_name')
-                ->get(['id', 'rider_name']);
+        $riders = Rider::select('id', 'rider_name')
+            ->orderBy('rider_name')
+            ->limit(100)
+            ->get();
 
+        if (!$request->expectsJson()) {
             return Inertia::render('food-orders/create', [
                 'statuses' => $statuses,
-                'riders' => $riders,
+                'riders' => $riders, 
             ]);
         }
 
-        $customers = Customer::orderBy('customer_name')->get(); // need further optimziation
-        $restaurants = Restaurant::orderBy('restaurant_name')->get(); // need further optimziation
-        $riders = Rider::query()
-            ->orderBy('rider_name')
-            ->get(['id', 'rider_name']); // need further optimziation
+        $customers = Customer::select('id', 'customer_name')
+            ->orderBy('customer_name')
+            ->limit(100)
+            ->get();
+
+        $restaurants = Restaurant::select('id', 'restaurant_name')
+            ->orderBy('restaurant_name')
+            ->limit(100)
+            ->get();
+
 
         return response()->json([
             'customers' => $customers,
@@ -94,7 +101,7 @@ class FoodOrderController extends Controller
             $request->validated()
         );
 
-        if (! $request->expectsJson()) {
+        if (!$request->expectsJson()) {
             return redirect()
                 ->route('food-orders.index')
                 ->with('success', 'Food order created successfully.');
@@ -118,7 +125,7 @@ class FoodOrderController extends Controller
             $request->validated()
         );
 
-        if (! $request->expectsJson()) {
+        if (!$request->expectsJson()) {
             return redirect()
                 ->route('food-orders.index')
                 ->with('success', 'Food order updated successfully.');
