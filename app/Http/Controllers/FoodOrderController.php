@@ -70,11 +70,11 @@ class FoodOrderController extends Controller
             ]);
         }
 
-        $customers = Customer::orderBy('customer_name')->get();
-        $restaurants = Restaurant::orderBy('restaurant_name')->get();
+        $customers = Customer::orderBy('customer_name')->get(); // need further optimziation
+        $restaurants = Restaurant::orderBy('restaurant_name')->get(); // need further optimziation
         $riders = Rider::query()
             ->orderBy('rider_name')
-            ->get(['id', 'rider_name']);
+            ->get(['id', 'rider_name']); // need further optimziation
 
         return response()->json([
             'customers' => $customers,

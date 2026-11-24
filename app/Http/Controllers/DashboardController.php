@@ -18,6 +18,7 @@ class DashboardController extends Controller
             'out_for_delivery',
         ];
 
+        // some of the business logic must came from SERVICES CLASS
         return Inertia::render('dashboard', [
             'stats' => [
                 'totalOrders' => FoodOrder::count(),

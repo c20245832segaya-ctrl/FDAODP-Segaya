@@ -51,9 +51,31 @@ const statuses: { value: OrderStatus; label: string }[] = [
 
 const emptyItem = (): OrderItem => ({ menu_item_name: '', item_price: '', quantity: 1 });
 
+const MAX_AMOUNT = 99_999_999.99;
+const MAX_QUANTITY = 4_294_967_295;
+
+const clampMoneyInput = (value: string) => {
+    if (value === '') {
+        return '';
+    }
+
+    const amount = Number(value);
+    if (!Number.isFinite(amount) || amount < 0) {
+        return '';
+    }
+
+    if (amount > MAX_AMOUNT) {
+        return MAX_AMOUNT.toFixed(2);
+    }
+
+    const [whole, decimal = ''] = value.split('.');
+    return decimal.length > 2 ? `${whole}.${decimal.slice(0, 2)}` : value;
+};
+
 const currency = new Intl.NumberFormat('en-PH', {
     style: 'currency',
     currency: 'PHP',
+    maximumFractionDigits: 2,
 });
 
 const capitalizeName = (value: string) =>
@@ -96,8 +118,7 @@ export default function CreateFoodOrder({
         form.setData('items', items);
     };
 
-    const itemError = (index: number, key: keyof OrderItem) =>
-        form.errors[`items.${index}.${key}` as keyof typeof form.errors];
+    const itemError = (index: number, key: keyof OrderItem) => form.errors[`items.${index}.${key}` as keyof typeof form.errors];
 
     return (
         <AppLayout breadcrumbs={breadcrumbs}>
@@ -106,22 +127,22 @@ export default function CreateFoodOrder({
             <main className="mx-auto w-full max-w-6xl space-y-8 p-4 md:p-8">
                 <div className="flex flex-col gap-5 sm:flex-row sm:items-end sm:justify-between">
                     <div className="space-y-3">
-                        <Button variant="ghost" size="sm" asChild className="-ml-3 text-muted-foreground">
+                        <Button variant="ghost" size="sm" asChild className="text-muted-foreground -ml-3">
                             <Link href={route('food-orders.index')}>
                                 <ArrowLeft />
                                 Back to orders
                             </Link>
                         </Button>
                         <div>
-                            <p className="text-sm font-medium text-primary">Order management</p>
+                            <p className="text-primary text-sm font-medium">Order management</p>
                             <h1 className="mt-1 text-3xl font-semibold tracking-tight">Create food order</h1>
-                            <p className="mt-2 text-muted-foreground">Add the delivery details and items for this order.</p>
+                            <p className="text-muted-foreground mt-2">Add the delivery details and items for this order.</p>
                         </div>
                     </div>
-                    <div className="hidden items-center gap-2 text-sm text-muted-foreground sm:flex">
-                        <span className="flex size-8 items-center justify-center rounded-full bg-primary text-primary-foreground">1</span>
-                        <span className="font-medium text-foreground">Order details</span>
-                        <span className="mx-1 h-px w-8 bg-border" />
+                    <div className="text-muted-foreground hidden items-center gap-2 text-sm sm:flex">
+                        <span className="bg-primary text-primary-foreground flex size-8 items-center justify-center rounded-full">1</span>
+                        <span className="text-foreground font-medium">Order details</span>
+                        <span className="bg-border mx-1 h-px w-8" />
                         <span className="flex size-8 items-center justify-center rounded-full border">2</span>
                         <span>Review</span>
                     </div>
@@ -132,7 +153,7 @@ export default function CreateFoodOrder({
                         <Card>
                             <CardHeader>
                                 <div className="flex items-center gap-3">
-                                    <span className="flex size-10 items-center justify-center rounded-lg bg-primary/10 text-primary">
+                                    <span className="bg-primary/10 text-primary flex size-10 items-center justify-center rounded-lg">
                                         <ClipboardList className="size-5" />
                                     </span>
                                     <div>
@@ -166,7 +187,11 @@ export default function CreateFoodOrder({
                                         <SelectContent>
                                             {availableStatuses.map((status) => {
                                                 const label = statuses.find((item) => item.value === status)?.label ?? status;
-                                                return <SelectItem key={status} value={status}>{label}</SelectItem>;
+                                                return (
+                                                    <SelectItem key={status} value={status}>
+                                                        {label}
+                                                    </SelectItem>
+                                                );
                                             })}
                                         </SelectContent>
                                     </Select>
@@ -219,14 +244,15 @@ export default function CreateFoodOrder({
                                         name="rider_id"
                                         value={form.data.rider_id ?? ''}
                                         onChange={(event) => form.setData('rider_id', event.target.value || null)}
-                                        className="mt-1 block w-full rounded-md border border-input bg-background px-3 py-2 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                                        className="border-input bg-background focus-visible:ring-ring mt-1 block w-full rounded-md border px-3 py-2 text-sm shadow-sm focus-visible:ring-2 focus-visible:outline-none"
                                     >
                                         <option value="">Select a rider (or leave blank for random)</option>
-                                        {riders && riders.map((rider) => (
-                                            <option key={rider.id} value={rider.id}>
-                                                {rider.rider_name}
-                                            </option>
-                                        ))}
+                                        {riders &&
+                                            riders.map((rider) => (
+                                                <option key={rider.id} value={rider.id}>
+                                                    {rider.rider_name}
+                                                </option>
+                                            ))}
                                     </select>
                                     <InputError message={form.errors.rider_id} />
                                 </div>
@@ -241,7 +267,7 @@ export default function CreateFoodOrder({
                                         maxLength={1000}
                                         required
                                         rows={3}
-                                        className="flex min-h-20 w-full resize-y rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:outline-hidden"
+                                        className="border-input bg-background ring-offset-background placeholder:text-muted-foreground focus-visible:ring-ring flex min-h-20 w-full resize-y rounded-md border px-3 py-2 text-sm focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-hidden"
                                     />
                                     <InputError message={form.errors.delivery_address} />
                                 </div>
@@ -259,14 +285,19 @@ export default function CreateFoodOrder({
                                         <CardDescription>Add each menu item and its quantity.</CardDescription>
                                     </div>
                                 </div>
-                                <Button type="button" variant="outline" size="sm" onClick={() => form.setData('items', [...form.data.items, emptyItem()])}>
+                                <Button
+                                    type="button"
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={() => form.setData('items', [...form.data.items, emptyItem()])}
+                                >
                                     <Plus />
                                     <span className="hidden sm:inline">Add item</span>
                                 </Button>
                             </CardHeader>
                             <CardContent className="space-y-4">
                                 {form.data.items.map((item, index) => (
-                                    <div key={index} className="rounded-lg border bg-muted/20 p-4">
+                                    <div key={index} className="bg-muted/20 rounded-lg border p-4">
                                         <div className="mb-4 flex items-center justify-between">
                                             <p className="text-sm font-medium">Item {index + 1}</p>
                                             <Button
@@ -275,8 +306,13 @@ export default function CreateFoodOrder({
                                                 size="icon"
                                                 aria-label={`Remove item ${index + 1}`}
                                                 disabled={form.data.items.length === 1}
-                                                onClick={() => form.setData('items', form.data.items.filter((_, itemIndex) => itemIndex !== index))}
-                                                className="size-8 text-muted-foreground hover:text-destructive"
+                                                onClick={() =>
+                                                    form.setData(
+                                                        'items',
+                                                        form.data.items.filter((_, itemIndex) => itemIndex !== index),
+                                                    )
+                                                }
+                                                className="text-muted-foreground hover:text-destructive size-8"
                                             >
                                                 <Trash2 />
                                             </Button>
@@ -303,8 +339,9 @@ export default function CreateFoodOrder({
                                                     max="99999999.99"
                                                     step="0.01"
                                                     value={item.item_price}
-                                                    onChange={(event) => updateItem(index, 'item_price', event.target.value)}
+                                                    onChange={(event) => updateItem(index, 'item_price', clampMoneyInput(event.target.value))}
                                                     placeholder="0.00"
+                                                    className="min-w-0 tabular-nums"
                                                     required
                                                 />
                                                 <InputError message={itemError(index, 'item_price')} />
@@ -318,7 +355,15 @@ export default function CreateFoodOrder({
                                                     max="4294967295"
                                                     step="1"
                                                     value={item.quantity}
-                                                    onChange={(event) => updateItem(index, 'quantity', Number(event.target.value))}
+                                                    onChange={(event) => {
+                                                        const quantity = Number(event.target.value);
+                                                        updateItem(
+                                                            index,
+                                                            'quantity',
+                                                            Number.isFinite(quantity) ? Math.min(MAX_QUANTITY, Math.max(1, quantity)) : 1,
+                                                        );
+                                                    }}
+                                                    className="min-w-0 tabular-nums"
                                                     required
                                                 />
                                                 <InputError message={itemError(index, 'quantity')} />
@@ -335,14 +380,16 @@ export default function CreateFoodOrder({
                         <Card>
                             <CardHeader>
                                 <div className="flex items-center gap-3">
-                                    <ReceiptText className="size-5 text-primary" />
+                                    <ReceiptText className="text-primary size-5" />
                                     <CardTitle className="text-lg">Order summary</CardTitle>
                                 </div>
                             </CardHeader>
                             <CardContent className="space-y-4">
-                                <div className="flex justify-between text-sm text-muted-foreground">
-                                    <span>Items ({form.data.items.length})</span>
-                                    <span>{currency.format(subtotal)}</span>
+                                <div className="text-muted-foreground grid grid-cols-[minmax(0,auto)_minmax(0,1fr)] gap-3 text-sm">
+                                    <span className="min-w-0">Items ({form.data.items.length})</span>
+                                    <span className="min-w-0 text-right [overflow-wrap:anywhere] break-words tabular-nums">
+                                        {currency.format(subtotal)}
+                                    </span>
                                 </div>
                                 <div className="grid gap-2">
                                     <Label htmlFor="delivery_fee">Delivery fee</Label>
@@ -353,28 +400,31 @@ export default function CreateFoodOrder({
                                         max="99999999.99"
                                         step="0.01"
                                         value={form.data.delivery_fee}
-                                        onChange={(event) => form.setData('delivery_fee', event.target.value)}
+                                        onChange={(event) => form.setData('delivery_fee', clampMoneyInput(event.target.value))}
+                                        className="min-w-0 tabular-nums"
                                         required
                                     />
                                     <InputError message={form.errors.delivery_fee} />
                                 </div>
                                 <div className="border-t pt-4">
-                                    <div className="flex items-center justify-between">
+                                    <div className="grid grid-cols-[auto_minmax(0,1fr)] items-start gap-3">
                                         <span className="font-medium">Total</span>
-                                        <span className="text-2xl font-semibold tracking-tight">{currency.format(total)}</span>
+                                        <span className="min-w-0 text-right text-xl font-semibold tracking-tight [overflow-wrap:anywhere] break-words tabular-nums sm:text-2xl">
+                                            {currency.format(total)}
+                                        </span>
                                     </div>
                                     <InputError message={form.errors['total_bill' as keyof typeof form.errors]} />
                                 </div>
                                 <Button type="submit" className="w-full" disabled={form.processing}>
                                     {form.processing ? 'Creating order…' : 'Create order'}
                                 </Button>
-                                <p className="text-center text-xs text-muted-foreground">You can review and update the order after creation.</p>
+                                <p className="text-muted-foreground text-center text-xs">You can review and update the order after creation.</p>
                             </CardContent>
                         </Card>
                         <Card className="bg-muted/30 shadow-none">
                             <CardContent className="pt-6">
                                 <p className="text-sm font-medium">Before you submit</p>
-                                <p className="mt-1 text-sm text-muted-foreground">Check the dispatch ID, delivery address, and item quantities.</p>
+                                <p className="text-muted-foreground mt-1 text-sm">Check the dispatch ID, delivery address, and item quantities.</p>
                             </CardContent>
                         </Card>
                     </aside>
